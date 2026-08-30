@@ -9,6 +9,9 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * MiniMessage-Katalog mit Client-Locale, Fallback Deutsch.
+ */
 public final class MessageService {
 
     private final LocaleResolver localeResolver;
@@ -49,6 +52,10 @@ public final class MessageService {
             return localeResolver.resolve(player);
         }
         return Locale.GERMAN;
+    }
+
+    public void reload() {
+        catalog.reload();
     }
 
     private String apply(String template, String... placeholders) {

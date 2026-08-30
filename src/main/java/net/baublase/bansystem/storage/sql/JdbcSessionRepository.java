@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * JDBC-Zugriff auf {@code player_sessions}.
+ */
 public final class JdbcSessionRepository implements SessionRepository {
 
     private final DataSource dataSource;

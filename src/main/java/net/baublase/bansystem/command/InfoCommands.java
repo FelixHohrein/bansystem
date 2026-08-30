@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * /banhistory und /altcheck als Textausgabe für Console und Chat.
+ */
 public final class InfoCommands implements TabExecutor {
 
     public enum Type {
@@ -42,13 +45,20 @@ public final class InfoCommands implements TabExecutor {
             plugin.messages().send(sender, Message.ERROR_USAGE, "usage", "/" + label + " <spieler>");
             return true;
         }
-        plugin.scheduler().supplyAsync(() -> plugin.punishExecutor().requireKnown(sender, args[0]))
-                .thenAccept(optional -> optional.ifPresent(target -> {
-                    if (type == Type.HISTORY) {
-                        sendHistory(sender, target);
-                    } else {
-                        sendAlt(sender, target);
+        plugin.scheduler().supplyAsync(() -> plugin.punishExecutor().lookupKnown(args[0]))
+                .thenAccept(optional -> plugin.scheduler().runSync(() -> {
+                    if (optional.isEmpty()) {
+                        plugin.messages().send(sender, Message.ERROR_UNKNOWN_PLAYER, "player", args[0]);
+                        return;
                     }
+                    PlayerRef target = optional.get();
+                    plugin.scheduler().runAsync(() -> {
+                        if (type == Type.HISTORY) {
+                            sendHistory(sender, target);
+                        } else {
+                            sendAlt(sender, target);
+                        }
+                    });
                 }));
         return true;
     }
@@ -103,6 +113,6 @@ public final class InfoCommands implements TabExecutor {
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        return List.of();
+        return PlayerNameCompleter.complete(plugin, args);
     }
 }

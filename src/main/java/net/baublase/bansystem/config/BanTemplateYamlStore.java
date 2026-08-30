@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Ban-Vorlagen in banTemplate.yml, ohne Server-Neustart per Reload aktualisierbar.
+ */
 public final class BanTemplateYamlStore {
 
     private final File file;

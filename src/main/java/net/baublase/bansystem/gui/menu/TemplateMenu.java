@@ -3,6 +3,7 @@ package net.baublase.bansystem.gui.menu;
 import net.baublase.bansystem.BanSystemPlugin;
 import net.baublase.bansystem.domain.template.BanTemplate;
 import net.baublase.bansystem.gui.GuiKeys;
+import net.baublase.bansystem.gui.GuiLayouts;
 import net.baublase.bansystem.gui.GuiMenu;
 import net.baublase.bansystem.gui.GuiSounds;
 import net.baublase.bansystem.i18n.Message;
@@ -17,6 +18,9 @@ import org.bukkit.inventory.Inventory;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Nur Anzeige der Vorlagen. Anwenden passiert im Punish-Menü des Spielers.
+ */
 public final class TemplateMenu extends GuiMenu {
 
     public TemplateMenu(BanSystemPlugin plugin) {
@@ -28,22 +32,24 @@ public final class TemplateMenu extends GuiMenu {
         Inventory inventory = create(player, 54, Message.GUI_TEMPLATES_TITLE);
         Locale locale = locale(player);
         int slot = 10;
-        for (BanTemplate template : plugin.templateService().list()) {
+        List<BanTemplate> templates = plugin.templateService().list();
+        if (templates.isEmpty()) {
+            inventory.setItem(22, button(Material.GRAY_STAINED_GLASS_PANE, player, GuiKeys.IGNORE, Message.GUI_EMPTY));
+        }
+        for (BanTemplate template : templates) {
             if (slot >= 44) {
                 break;
             }
-            if (slot % 9 == 8) {
-                slot += 2;
-            }
             String duration = DurationFormatter.format(template.getDuration(), messages, locale);
-            inventory.setItem(slot, named(Material.PAPER,
+            inventory.setItem(slot, named(Material.WRITABLE_BOOK,
                     Component.text(template.getName(), NamedTextColor.GOLD),
                     List.of(
                             Component.text(template.getId(), NamedTextColor.DARK_GRAY),
                             Component.text(duration, NamedTextColor.AQUA),
-                            Component.text(template.getReason(), NamedTextColor.WHITE)
+                            Component.text(template.getReason(), NamedTextColor.WHITE),
+                            messages.component(locale, Message.GUI_TEMPLATE_HINT)
                     )));
-            slot++;
+            slot = GuiLayouts.nextInner(slot);
         }
         inventory.setItem(45, button(Material.ARROW, player, GuiKeys.BACK, Message.GUI_BACK));
         GuiSounds.open(player);

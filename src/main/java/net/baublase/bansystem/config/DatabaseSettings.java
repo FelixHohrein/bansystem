@@ -5,6 +5,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 
+/**
+ * Liest database.yml. connection-allowed=false startet ohne Verbindung.
+ */
 @Getter
 public final class DatabaseSettings {
 

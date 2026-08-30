@@ -5,6 +5,7 @@ import lombok.Value;
 
 import java.time.Duration;
 
+/** Ban-Vorlage: Dauer ZERO bedeutet permanent. */
 @Value
 @Builder
 public class BanTemplate {

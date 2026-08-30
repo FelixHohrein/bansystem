@@ -7,9 +7,11 @@ import net.baublase.bansystem.domain.player.KnownPlayer;
 import net.baublase.bansystem.domain.player.PlayerRef;
 import net.baublase.bansystem.gui.GuiItems;
 import net.baublase.bansystem.gui.GuiKeys;
+import net.baublase.bansystem.gui.GuiLayouts;
 import net.baublase.bansystem.gui.GuiMenu;
 import net.baublase.bansystem.gui.GuiSounds;
 import net.baublase.bansystem.gui.SkullFactory;
+import net.baublase.bansystem.gui.input.PendingPunishActions;
 import net.baublase.bansystem.i18n.Message;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -30,23 +32,34 @@ public final class PlayerBrowserMenu extends GuiMenu {
 
     public enum Mode {
         ALL,
-        BANNED
+        BANNED,
+        SEARCH
     }
 
     private static final int PAGE_SIZE = 28;
 
     private final Mode mode;
     private final int page;
+    private final List<PlayerRef> snapshot;
     private int totalPages = 1;
 
     public PlayerBrowserMenu(BanSystemPlugin plugin, Mode mode) {
-        this(plugin, mode, 0);
+        this(plugin, mode, 0, null);
     }
 
     public PlayerBrowserMenu(BanSystemPlugin plugin, Mode mode, int page) {
+        this(plugin, mode, page, null);
+    }
+
+    public PlayerBrowserMenu(BanSystemPlugin plugin, List<PlayerRef> snapshot, int page) {
+        this(plugin, Mode.SEARCH, page, snapshot);
+    }
+
+    private PlayerBrowserMenu(BanSystemPlugin plugin, Mode mode, int page, List<PlayerRef> snapshot) {
         super(plugin);
         this.mode = mode;
         this.page = Math.max(0, page);
+        this.snapshot = snapshot == null ? null : List.copyOf(snapshot);
     }
 
     @Override
@@ -56,36 +69,36 @@ public final class PlayerBrowserMenu extends GuiMenu {
             if (!player.isOnline()) {
                 return;
             }
-            Inventory inventory = create(player, 54, mode == Mode.ALL ? Message.GUI_ALL_PLAYERS : Message.GUI_BANNED_PLAYERS);
-            int[] content = contentSlots();
+            Message title = switch (mode) {
+                case BANNED -> Message.GUI_BANNED_PLAYERS;
+                case SEARCH -> Message.GUI_SEARCH_RESULTS;
+                case ALL -> Message.GUI_ALL_PLAYERS;
+            };
+            Inventory inventory = create(player, 54, title);
+            int[] content = GuiLayouts.inner28();
             for (int i = 0; i < items.size() && i < content.length; i++) {
                 inventory.setItem(content[i], items.get(i));
             }
-            inventory.setItem(45, button(Material.ARROW, player, GuiKeys.PREV, Message.GUI_PREVIOUS));
+            boolean hasPrev = page > 0;
+            boolean hasNext = page + 1 < totalPages;
+            inventory.setItem(45, hasPrev
+                    ? button(Material.ARROW, player, GuiKeys.PREV, Message.GUI_PREVIOUS)
+                    : disabledNav(player, Message.GUI_PREVIOUS));
             inventory.setItem(49, button(Material.PAPER, player, GuiKeys.IGNORE, Message.GUI_PAGE,
                     "page", String.valueOf(page + 1),
                     "pages", String.valueOf(Math.max(1, totalPages))));
-            inventory.setItem(53, button(Material.ARROW, player, GuiKeys.NEXT, Message.GUI_NEXT));
+            inventory.setItem(53, hasNext
+                    ? button(Material.ARROW, player, GuiKeys.NEXT, Message.GUI_NEXT)
+                    : disabledNav(player, Message.GUI_NEXT));
+            inventory.setItem(47, button(Material.COMPASS, player, GuiKeys.SEARCH, Message.GUI_SEARCH, Message.GUI_SEARCH_LORE));
             inventory.setItem(48, button(Material.ARROW, player, GuiKeys.BACK, Message.GUI_BACK));
+            inventory.setItem(51, button(Material.SUNFLOWER, player, GuiKeys.REFRESH, Message.GUI_REFRESH));
             GuiSounds.open(player);
             player.openInventory(inventory);
         })).exceptionally(throwable -> {
             plugin.pluginLogger().error("GUI Spielerliste fehlgeschlagen", throwable);
             return null;
         });
-    }
-
-    /**
-     * Innere Slots ohne Rahmen (7×4).
-     */
-    private int[] contentSlots() {
-        List<Integer> slots = new ArrayList<>();
-        for (int row = 1; row <= 4; row++) {
-            for (int col = 1; col <= 7; col++) {
-                slots.add(row * 9 + col);
-            }
-        }
-        return slots.stream().mapToInt(Integer::intValue).toArray();
     }
 
     private List<ItemStack> loadHeads(Player viewer) {
@@ -104,7 +117,7 @@ public final class PlayerBrowserMenu extends GuiMenu {
             List<Ban> history = plugin.banService().history(ref.getUuid());
             boolean banned = plugin.banService().activeBan(ref.getUuid()).isPresent();
             ItemStack head = skulls.head(ref, score, history, banned, locale(viewer));
-            GuiKeys.setAction(plugin, head, "player", ref.getUuid().toString());
+            GuiKeys.setAction(plugin, head, GuiKeys.PLAYER, ref.getUuid() + ":" + ref.getName());
             if (banned) {
                 GuiItems.glow(head);
             }
@@ -117,6 +130,9 @@ public final class PlayerBrowserMenu extends GuiMenu {
     }
 
     private List<PlayerRef> resolvePlayers() {
+        if (snapshot != null) {
+            return new ArrayList<>(snapshot);
+        }
         if (mode == Mode.BANNED) {
             return new ArrayList<>(plugin.banService().bannedPlayers());
         }
@@ -127,14 +143,28 @@ public final class PlayerBrowserMenu extends GuiMenu {
         return players;
     }
 
+    private PlayerBrowserMenu samePage(int newPage) {
+        if (snapshot != null) {
+            return new PlayerBrowserMenu(plugin, snapshot, newPage);
+        }
+        return new PlayerBrowserMenu(plugin, mode, newPage);
+    }
+
     @Override
     public void onAction(Player player, String action, String payload, InventoryClickEvent event) {
         switch (action) {
             case GuiKeys.BACK -> new MainMenu(plugin).open(player);
+            case GuiKeys.SEARCH -> {
+                player.closeInventory();
+                plugin.pendingActions().put(player, new PendingPunishActions.Pending(
+                        null, PendingPunishActions.Step.SEARCH, null, null));
+                messages.send(player, Message.PROMPT_SEARCH);
+            }
+            case GuiKeys.REFRESH -> samePage(page).open(player);
             case GuiKeys.PREV -> {
                 if (page > 0) {
                     GuiSounds.page(player);
-                    new PlayerBrowserMenu(plugin, mode, page - 1).open(player);
+                    samePage(page - 1).open(player);
                 } else {
                     GuiSounds.deny(player);
                 }
@@ -142,18 +172,18 @@ public final class PlayerBrowserMenu extends GuiMenu {
             case GuiKeys.NEXT -> {
                 if (page + 1 < totalPages) {
                     GuiSounds.page(player);
-                    new PlayerBrowserMenu(plugin, mode, page + 1).open(player);
+                    samePage(page + 1).open(player);
                 } else {
                     GuiSounds.deny(player);
                 }
             }
-            case "player" -> {
+            case GuiKeys.PLAYER -> {
                 if (payload == null) {
                     return;
                 }
-                UUID uuid = UUID.fromString(payload);
-                Player online = Bukkit.getPlayer(uuid);
-                String name = online != null ? online.getName() : plugin.banService().known(uuid).map(KnownPlayer::getName).orElse("?");
+                String[] parts = payload.split(":", 2);
+                UUID uuid = UUID.fromString(parts[0]);
+                String name = parts.length > 1 ? parts[1] : plugin.banService().known(uuid).map(KnownPlayer::getName).orElse("?");
                 new PunishMenu(plugin, PlayerRef.builder().uuid(uuid).name(name).build()).open(player);
             }
             default -> {

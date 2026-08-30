@@ -14,10 +14,14 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 
+/**
+ * Hub-Befehl: GUI, Hilfe und Reload von Sprache/Config/Templates.
+ */
 public final class BansCommand implements TabExecutor {
 
     private final BanSystemPlugin plugin;
@@ -32,6 +36,15 @@ public final class BansCommand implements TabExecutor {
             sendHelp(sender);
             return true;
         }
+        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            if (!sender.hasPermission("bansystem.reload") && !sender.hasPermission("bansystem.admin")) {
+                plugin.messages().send(sender, Message.ERROR_NO_PERMISSION);
+                return true;
+            }
+            plugin.bootstrap().reload();
+            plugin.messages().send(sender, Message.RELOAD_DONE);
+            return true;
+        }
         if (!(sender instanceof Player player)) {
             plugin.messages().send(sender, Message.ERROR_PLAYER_ONLY);
             return true;
@@ -40,21 +53,22 @@ public final class BansCommand implements TabExecutor {
             plugin.messages().send(player, Message.ERROR_NO_PERMISSION);
             return true;
         }
-        if (!plugin.punishExecutor().ensureDatabase(player)) {
-            return true;
-        }
         if (args.length == 0) {
             new MainMenu(plugin).open(player);
+            return true;
+        }
+        if (!plugin.punishExecutor().ensureDatabase(player)) {
             return true;
         }
         if (args[0].equalsIgnoreCase("templates")) {
             new TemplateMenu(plugin).open(player);
             return true;
         }
-        plugin.scheduler().supplyAsync(() -> plugin.banService().known(args[0])).thenAccept(known ->
+        String query = args[0];
+        plugin.scheduler().supplyAsync(() -> plugin.banService().known(query)).thenAccept(known ->
                 plugin.scheduler().runSync(() -> {
                     if (known.isEmpty()) {
-                        plugin.messages().send(player, Message.ERROR_UNKNOWN_PLAYER, "player", args[0]);
+                        plugin.messages().send(player, Message.ERROR_UNKNOWN_PLAYER, "player", query);
                         return;
                     }
                     KnownPlayer target = known.get();
@@ -69,6 +83,7 @@ public final class BansCommand implements TabExecutor {
                 Message.HELP_BANS,
                 Message.HELP_BANS_PLAYER,
                 Message.HELP_BANS_HELP,
+                Message.HELP_RELOAD,
                 Message.HELP_BAN,
                 Message.HELP_TEMPBAN,
                 Message.HELP_UNBAN,
@@ -80,15 +95,16 @@ public final class BansCommand implements TabExecutor {
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        if (args.length == 1) {
-            String prefix = args[0].toLowerCase(Locale.ROOT);
-            return Stream.concat(Stream.of("help", "templates"), plugin.storage().isEnabled()
-                            ? plugin.banService().allKnown().stream().map(KnownPlayer::getName)
-                            : Stream.empty())
-                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
-                    .limit(20)
-                    .toList();
+        if (args.length != 1) {
+            return List.of();
         }
-        return List.of();
+        String prefix = args[0].toLowerCase(Locale.ROOT);
+        List<String> options = new ArrayList<>(List.of("help", "templates", "reload"));
+        options.addAll(PlayerNameCompleter.complete(plugin, args));
+        return options.stream()
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .distinct()
+                .limit(20)
+                .toList();
     }
 }

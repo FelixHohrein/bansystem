@@ -18,7 +18,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.List;
 
 /**
- * Zentraler Einstieg: Listen, Suche, Templates, Hilfe.
+ * Zentraler Einstieg: Listen, Suche, Templates, Hilfe und Kurzstatistik.
  */
 public final class MainMenu extends GuiMenu {
 
@@ -35,6 +35,15 @@ public final class MainMenu extends GuiMenu {
                 Component.text(player.getName(), NamedTextColor.GOLD),
                 List.of(messages.component(locale(player), Message.GUI_HELP_ITEM_LORE))
         ));
+
+        if (!plugin.storage().isEnabled()) {
+            inventory.setItem(22, button(Material.BARRIER, player, GuiKeys.IGNORE, Message.GUI_DATABASE_DISABLED));
+            inventory.setItem(31, button(Material.BOOK, player, GuiKeys.HELP, Message.GUI_HELP_ITEM, Message.GUI_HELP_ITEM_LORE));
+            inventory.setItem(49, button(Material.BARRIER, player, GuiKeys.CLOSE, Message.GUI_CLOSE));
+            GuiSounds.open(player);
+            player.openInventory(inventory);
+            return;
+        }
 
         ItemStack all = button(Material.PLAYER_HEAD, player, GuiKeys.ALL_PLAYERS, Message.GUI_ALL_PLAYERS, Message.GUI_ALL_PLAYERS_LORE);
         ItemStack banned = GuiItems.glow(button(Material.WITHER_SKELETON_SKULL, player, GuiKeys.BANNED_PLAYERS, Message.GUI_BANNED_PLAYERS, Message.GUI_BANNED_PLAYERS_LORE));
@@ -60,20 +69,16 @@ public final class MainMenu extends GuiMenu {
     }
 
     private void refreshStats(Player player, Inventory inventory) {
-        if (!plugin.storage().isEnabled()) {
-            return;
-        }
-        plugin.scheduler().supplyAsync(() -> {
-            int known = plugin.banService().allKnown().size();
-            int banned = plugin.banService().bannedPlayers().size();
-            return new int[]{known, banned};
+        plugin.scheduler().supplyAsync(() -> new int[]{
+                plugin.banService().countKnown(),
+                plugin.banService().countBanned()
         }).thenAccept(counts -> plugin.scheduler().runSync(() -> {
             if (!player.isOnline()) {
                 return;
             }
             ItemStack stats = button(Material.MAP, player, GuiKeys.STATS, Message.GUI_STATS, List.of(
-                    Component.text("Spieler: " + counts[0], NamedTextColor.GRAY),
-                    Component.text("Gebannt: " + counts[1], NamedTextColor.RED)
+                    messages.component(locale(player), Message.GUI_STATS_PLAYERS, "count", String.valueOf(counts[0])),
+                    messages.component(locale(player), Message.GUI_STATS_BANNED, "count", String.valueOf(counts[1]))
             ));
             inventory.setItem(33, stats);
         }));
@@ -95,11 +100,7 @@ public final class MainMenu extends GuiMenu {
                 player.closeInventory();
                 player.performCommand("bans help");
             }
-            case GuiKeys.CLOSE, GuiKeys.STATS -> {
-                if (GuiKeys.CLOSE.equals(action)) {
-                    player.closeInventory();
-                }
-            }
+            case GuiKeys.CLOSE -> player.closeInventory();
             default -> {
             }
         }

@@ -18,4 +18,11 @@ public interface BanRepository {
     List<Ban> findHistory(UUID targetUuid);
 
     List<PlayerRef> findCurrentlyBannedPlayers();
+
+    int countCurrentlyBanned();
+
+    /**
+     * Setzt abgelaufene Temp-Bans auf inactive, damit die Tabelle nicht voller Altlasten bleibt.
+     */
+    int deactivateExpired();
 }

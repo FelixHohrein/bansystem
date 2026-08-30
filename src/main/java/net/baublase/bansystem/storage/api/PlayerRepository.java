@@ -14,5 +14,12 @@ public interface PlayerRepository {
 
     Optional<KnownPlayer> findByName(String name);
 
+    /**
+     * Teilstring-Suche, case-insensitive, neueste zuerst.
+     */
+    List<KnownPlayer> searchByName(String query, int limit);
+
     List<KnownPlayer> findAll();
+
+    int countAll();
 }

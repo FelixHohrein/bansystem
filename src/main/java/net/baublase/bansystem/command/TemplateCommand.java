@@ -18,6 +18,9 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * /bantemplate list|set|delete. set nutzt die id auch als Anzeigenamen.
+ */
 public final class TemplateCommand implements TabExecutor {
 
     private final BanSystemPlugin plugin;
@@ -79,6 +82,9 @@ public final class TemplateCommand implements TabExecutor {
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
             return List.of("list", "set", "delete");
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("set")) {
+            return List.of("permanent", "1h", "6h", "1d", "7d", "30d");
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("delete")) {
             return plugin.templateService().list().stream().map(BanTemplate::getId).toList();

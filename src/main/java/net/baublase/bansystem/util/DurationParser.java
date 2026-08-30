@@ -6,6 +6,9 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Parst 1d, 12h, 30m, kombinierbar (1d12h). permanent/perm/0 = Dauer-Ban.
+ */
 public final class DurationParser {
 
     private static final Pattern TOKEN = Pattern.compile("(\\d+)([dhms])", Pattern.CASE_INSENSITIVE);

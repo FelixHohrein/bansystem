@@ -18,6 +18,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * JDBC-Zugriff auf {@code bans}. Abgelaufene Temp-Bans zählen nicht als aktiv.
+ */
 public final class JdbcBanRepository implements BanRepository {
 
     private final DataSource dataSource;
@@ -141,6 +144,37 @@ public final class JdbcBanRepository implements BanRepository {
             return players;
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to list banned players", exception);
+        }
+    }
+
+    @Override
+    public int countCurrentlyBanned() {
+        String sql = """
+                SELECT COUNT(DISTINCT target_uuid)
+                FROM bans
+                WHERE active = TRUE AND (expires_at IS NULL OR expires_at > NOW())
+                """;
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            return resultSet.next() ? resultSet.getInt(1) : 0;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to count banned players", exception);
+        }
+    }
+
+    @Override
+    public int deactivateExpired() {
+        String sql = """
+                UPDATE bans
+                SET active = FALSE
+                WHERE active = TRUE AND expires_at IS NOT NULL AND expires_at <= NOW()
+                """;
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            return statement.executeUpdate();
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to deactivate expired bans", exception);
         }
     }
 

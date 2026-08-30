@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Ban-Vorlagen im Speicher, persistiert über YAML.
+ */
 public final class TemplateService {
 
     private final BanTemplateYamlStore store;
@@ -37,5 +40,9 @@ public final class TemplateService {
         } catch (IOException exception) {
             throw new IllegalStateException("Template konnte nicht gelöscht werden", exception);
         }
+    }
+
+    public void reload() {
+        store.reload();
     }
 }

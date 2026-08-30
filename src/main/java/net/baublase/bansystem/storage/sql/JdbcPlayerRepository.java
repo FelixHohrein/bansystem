@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * JDBC-Zugriff auf {@code players}.
+ */
 public final class JdbcPlayerRepository implements PlayerRepository {
 
     private final DataSource dataSource;
@@ -102,6 +105,46 @@ public final class JdbcPlayerRepository implements PlayerRepository {
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to list players", exception);
         }
+    }
+
+    @Override
+    public List<KnownPlayer> searchByName(String query, int limit) {
+        String sql = """
+                SELECT * FROM players
+                WHERE LOWER(name) LIKE LOWER(?) ESCAPE '!'
+                ORDER BY last_seen DESC
+                LIMIT ?
+                """;
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, "%" + escapeLike(query) + "%");
+            statement.setInt(2, limit);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<KnownPlayer> players = new ArrayList<>();
+                while (resultSet.next()) {
+                    players.add(map(resultSet));
+                }
+                return players;
+            }
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to search players for " + query, exception);
+        }
+    }
+
+    @Override
+    public int countAll() {
+        String sql = "SELECT COUNT(*) FROM players";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            return resultSet.next() ? resultSet.getInt(1) : 0;
+        } catch (SQLException exception) {
+            throw new IllegalStateException("Failed to count players", exception);
+        }
+    }
+
+    private String escapeLike(String query) {
+        return query.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     private KnownPlayer map(ResultSet resultSet) throws SQLException {

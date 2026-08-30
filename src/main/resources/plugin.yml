@@ -9,7 +9,7 @@ load: STARTUP
 commands:
   bans:
     description: Öffnet das Ban-System-Menü oder die Hilfe
-    usage: /bans [spieler|help|templates]
+    usage: /bans [spieler|help|templates|reload]
     aliases: [bansystem]
   ban:
     description: Bannt einen Spieler permanent
@@ -52,6 +52,9 @@ permissions:
   bansystem.template:
     description: Templates anlegen und überschreiben
     default: op
+  bansystem.reload:
+    description: Config, Sprache und Templates neu laden
+    default: op
   bansystem.bypass:
     description: Immunität gegen Bans
     default: false
@@ -69,4 +72,5 @@ permissions:
       bansystem.history: true
       bansystem.altcheck: true
       bansystem.template: true
+      bansystem.reload: true
       bansystem.bypass.override: true

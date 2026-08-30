@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Chat-Shortcuts für /ban, /tempban und /unban — das GUI bleibt der Hauptweg.
+ */
 public final class PunishmentCommands implements TabExecutor {
 
     public enum Type {
@@ -53,8 +56,14 @@ public final class PunishmentCommands implements TabExecutor {
             plugin.messages().send(sender, Message.ERROR_USAGE, "usage", "/unban <spieler>");
             return true;
         }
-        plugin.scheduler().supplyAsync(() -> plugin.punishExecutor().requireKnown(sender, args[0]))
-                .thenAccept(optional -> plugin.scheduler().runSync(() -> optional.ifPresent(target -> execute(sender, target, args))));
+        plugin.scheduler().supplyAsync(() -> plugin.punishExecutor().lookupKnown(args[0]))
+                .thenAccept(optional -> plugin.scheduler().runSync(() -> {
+                    if (optional.isEmpty()) {
+                        plugin.messages().send(sender, Message.ERROR_UNKNOWN_PLAYER, "player", args[0]);
+                        return;
+                    }
+                    execute(sender, optional.get(), args);
+                }));
         return true;
     }
 
@@ -79,6 +88,6 @@ public final class PunishmentCommands implements TabExecutor {
 
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        return List.of();
+        return PlayerNameCompleter.complete(plugin, args);
     }
 }

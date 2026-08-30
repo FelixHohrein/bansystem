@@ -31,6 +31,11 @@ public final class GuiKeys {
     public static final String CANCEL = "cancel";
     public static final String CUSTOM_REASON = "custom-reason";
     public static final String CUSTOM_DURATION = "custom-duration";
+    public static final String PLAYER = "player";
+    public static final String DURATION = "duration";
+    public static final String APPLY_TEMPLATE = "apply-template";
+    public static final String TEMPLATE_REASON = "template-reason";
+    public static final String REFRESH = "refresh";
     public static final String IGNORE = "ignore";
 
     private GuiKeys() {

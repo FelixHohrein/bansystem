@@ -13,6 +13,9 @@ import net.baublase.bansystem.storage.sql.JdbcPlayerRepository;
 import net.baublase.bansystem.storage.sql.JdbcSessionRepository;
 import net.baublase.bansystem.storage.sql.SchemaMigrator;
 
+/**
+ * JDBC-Fassade. Ohne connection-allowed bleiben die Repositories null.
+ */
 @Getter
 public final class Storage {
 
@@ -44,13 +47,15 @@ public final class Storage {
             throw new IllegalStateException("Tabellen konnten nicht erstellt werden", exception);
         }
         logger.info("PostgreSQL verbunden, Tabellen geprüft.");
-        return new Storage(
+        Storage storage = new Storage(
                 true,
                 dataSource,
                 new JdbcPlayerRepository(dataSource),
                 new JdbcSessionRepository(dataSource),
                 new JdbcBanRepository(dataSource)
         );
+        storage.getBans().deactivateExpired();
+        return storage;
     }
 
     public void close() {

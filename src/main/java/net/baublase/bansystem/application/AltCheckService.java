@@ -1,7 +1,7 @@
 package net.baublase.bansystem.application;
 
+import net.baublase.bansystem.BanSystemPlugin;
 import net.baublase.bansystem.bukkit.PublicAreaRegistry;
-import net.baublase.bansystem.config.PluginConfiguration;
 import net.baublase.bansystem.domain.alt.AltMatch;
 import net.baublase.bansystem.domain.alt.AltScore;
 import net.baublase.bansystem.domain.player.KnownPlayer;
@@ -22,16 +22,19 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Alt-Score 0–100 aus Vanilla-Signalen (IP, Sessions, Login-Stunden, private Chunks, Locale+Brand).
+ */
 public final class AltCheckService {
 
+    private final BanSystemPlugin plugin;
     private final Storage storage;
-    private final PluginConfiguration.AltScoreWeights weights;
     private final PublicAreaRegistry publicAreas;
 
-    public AltCheckService(Storage storage, PluginConfiguration configuration, PublicAreaRegistry publicAreas) {
+    public AltCheckService(BanSystemPlugin plugin, Storage storage) {
+        this.plugin = plugin;
         this.storage = storage;
-        this.weights = configuration.getAltScoreWeights();
-        this.publicAreas = publicAreas;
+        this.publicAreas = new PublicAreaRegistry(plugin);
     }
 
     public AltScore score(UUID targetUuid) {
@@ -103,22 +106,22 @@ public final class AltCheckService {
         String otherLastIp = lastIp(theirs);
         boolean currentIp = ownLastIp != null && ownLastIp.equals(otherLastIp);
         if (currentIp) {
-            score += weights.getSameIpCurrent();
+            score += plugin.configuration().getAltScoreWeights().getSameIpCurrent();
         } else if (sharesIp(own, theirs)) {
-            score += weights.getSameIpHistory();
+            score += plugin.configuration().getAltScoreWeights().getSameIpHistory();
         }
         if (!overlaps(own, theirs)) {
-            score += weights.getNeverOnlineTogether();
+            score += plugin.configuration().getAltScoreWeights().getNeverOnlineTogether();
         }
         if (similarHours(own, theirs)) {
-            score += weights.getSimilarLoginHours();
+            score += plugin.configuration().getAltScoreWeights().getSimilarLoginHours();
         }
         if (samePrivateChunk(target, other)) {
-            score += weights.getSameChunk();
+            score += plugin.configuration().getAltScoreWeights().getSameChunk();
         }
         if (target.getLocale() != null && target.getLocale().equalsIgnoreCase(other.getLocale())
                 && target.getClientBrand() != null && target.getClientBrand().equalsIgnoreCase(other.getClientBrand())) {
-            score += weights.getSameLocaleAndBrand();
+            score += plugin.configuration().getAltScoreWeights().getSameLocaleAndBrand();
         }
         return score;
     }

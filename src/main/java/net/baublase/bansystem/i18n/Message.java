@@ -2,6 +2,9 @@ package net.baublase.bansystem.i18n;
 
 import java.util.Locale;
 
+/**
+ * Schlüssel für lang/de.yml und lang/en.yml (yaml-key = enum-name in Kleinbuchstaben mit Bindestrich).
+ */
 public enum Message {
     PREFIX,
     ERROR_NO_PERMISSION,
@@ -100,6 +103,23 @@ public enum Message {
     GUI_HISTORY_LORE,
     GUI_ALTCHECK_LORE,
     GUI_MATCHES,
+    GUI_STATS_PLAYERS,
+    GUI_STATS_BANNED,
+    GUI_ACTION_UNBAN,
+    GUI_ACTION_PERM,
+    GUI_ACTION_TEMP,
+    GUI_DATABASE_DISABLED,
+    GUI_SEARCH_RESULTS,
+    GUI_LORE_IMMUNE,
+    GUI_REFRESH,
+    GUI_ALREADY_BANNED,
+    GUI_NOT_BANNED_HINT,
+    GUI_TEMPLATE_HINT,
+    GUI_HISTORY_ACTIVE,
+    GUI_HISTORY_INACTIVE,
+    GUI_STAFF,
+    HELP_RELOAD,
+    RELOAD_DONE,
     PROMPT_SEARCH,
     BAN_SCREEN_PERMANENT,
     BAN_SCREEN_TEMPORARY,

@@ -57,10 +57,11 @@ public abstract class GuiMenu {
     }
 
     /**
-     * Dunkler Rahmen, damit der Inhalt in der Mitte klarer wirkt.
+     * Dunkler Rahmen mit orangen Ecken, damit der Inhalt in der Mitte klarer wirkt.
      */
     protected void frame(Inventory inventory) {
         ItemStack pane = filler();
+        ItemStack accent = accent();
         int size = inventory.getSize();
         int rows = size / 9;
         for (int i = 0; i < 9; i++) {
@@ -71,12 +72,29 @@ public abstract class GuiMenu {
             inventory.setItem(row * 9, pane);
             inventory.setItem(row * 9 + 8, pane);
         }
+        inventory.setItem(0, accent);
+        inventory.setItem(8, accent);
+        inventory.setItem(size - 9, accent);
+        inventory.setItem(size - 1, accent);
     }
 
     protected ItemStack filler() {
         ItemStack pane = GuiItems.pane(Material.BLACK_STAINED_GLASS_PANE);
         GuiKeys.setAction(plugin, pane, GuiKeys.IGNORE);
         return pane;
+    }
+
+    protected ItemStack accent() {
+        ItemStack pane = GuiItems.pane(Material.ORANGE_STAINED_GLASS_PANE);
+        GuiKeys.setAction(plugin, pane, GuiKeys.IGNORE);
+        return pane;
+    }
+
+    /**
+     * Grauer Platzhalter, wenn Vor/Zurück am Rand der Pagination nichts tut.
+     */
+    protected ItemStack disabledNav(Player player, Message name) {
+        return button(Material.GRAY_DYE, player, GuiKeys.IGNORE, name);
     }
 
     protected ItemStack button(Material material, Player player, String action, Message name) {

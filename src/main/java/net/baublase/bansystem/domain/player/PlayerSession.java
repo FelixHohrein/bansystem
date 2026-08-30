@@ -6,6 +6,7 @@ import lombok.Value;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Eine Login-Session für Alt-Signale (IP, Chunk, Zeiten). */
 @Value
 @Builder
 public class PlayerSession {

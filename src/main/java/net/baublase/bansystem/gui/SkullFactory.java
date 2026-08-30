@@ -52,10 +52,15 @@ public final class SkullFactory {
         if (history.isEmpty()) {
             lore.add(GuiItems.plain(plugin.messages().component(locale, Message.GUI_LORE_HISTORY_EMPTY)));
         } else {
-            history.stream().limit(4).forEach(ban -> lore.add(GuiItems.plain(Component.text(
-                    "• " + ban.getType().name() + " · " + ban.getReason() + " · " + DurationFormatter.date(ban.getCreatedAt()),
-                    NamedTextColor.GRAY
-            ))));
+            history.stream().limit(4).forEach(ban -> {
+                String type = plugin.messages().plain(locale, ban.permanent()
+                        ? Message.HISTORY_TYPE_PERMANENT
+                        : Message.HISTORY_TYPE_TEMPORARY);
+                lore.add(GuiItems.plain(Component.text(
+                        "• " + type + " · " + ban.getReason() + " · " + DurationFormatter.date(ban.getCreatedAt()),
+                        NamedTextColor.GRAY
+                )));
+            });
         }
         lore.add(Component.empty());
         lore.add(GuiItems.plain(plugin.messages().component(locale, Message.GUI_CLICK_OPEN)));

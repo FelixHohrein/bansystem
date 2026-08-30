@@ -6,6 +6,9 @@ import net.baublase.bansystem.domain.player.PlayerRef;
 
 import java.time.Instant;
 
+/**
+ * Ein Ban-Eintrag. Historie bleibt nach Unban/Ablauf erhalten (active=false).
+ */
 @Value
 @Builder
 public class Ban {

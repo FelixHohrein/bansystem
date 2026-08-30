@@ -4,6 +4,9 @@ import org.bukkit.entity.Player;
 
 import java.util.Locale;
 
+/**
+ * EN wenn die Client-Sprache mit en beginnt, sonst DE.
+ */
 public final class LocaleResolver {
 
     public Locale resolve(Player player) {

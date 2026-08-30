@@ -18,6 +18,9 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Führt Ban/Unban aus, kickt Online-Spieler und prüft Immunität.
+ */
 public final class PunishExecutor {
 
     private final BanSystemPlugin plugin;
@@ -51,14 +54,29 @@ public final class PunishExecutor {
         return false;
     }
 
-    public Optional<PlayerRef> requireKnown(CommandSender sender, String name) {
+    public Optional<PlayerRef> lookupKnown(String name) {
         Optional<KnownPlayer> known = banService.known(name);
         if (known.isEmpty()) {
-            messages.send(sender, Message.ERROR_UNKNOWN_PLAYER, "player", name);
             return Optional.empty();
         }
         KnownPlayer player = known.get();
         return Optional.of(PlayerRef.builder().uuid(player.getUuid()).name(player.getName()).build());
+    }
+
+    public Optional<PlayerRef> requireKnown(CommandSender sender, String name) {
+        Optional<PlayerRef> found = lookupKnown(name);
+        if (found.isEmpty()) {
+            messages.send(sender, Message.ERROR_UNKNOWN_PLAYER, "player", name);
+        }
+        return found;
+    }
+
+    /**
+     * Immunität gilt nur für online Spieler mit {@code bansystem.bypass}.
+     * Offline-Rechte (LuckPerms) prüfen wir bewusst nicht.
+     */
+    public boolean isImmune(CommandSender staff, Player onlineTarget) {
+        return immunityService.isImmune(onlineTarget, staff);
     }
 
     public void banPermanent(CommandSender staff, PlayerRef target, String reason, String templateId) {

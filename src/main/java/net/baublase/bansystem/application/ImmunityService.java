@@ -4,6 +4,9 @@ import net.baublase.bansystem.domain.player.PlayerRef;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+/**
+ * {@code bansystem.bypass} schützt nur Online-Spieler. Override: {@code bansystem.bypass.override}.
+ */
 public final class ImmunityService {
 
     public static final String BYPASS = "bansystem.bypass";

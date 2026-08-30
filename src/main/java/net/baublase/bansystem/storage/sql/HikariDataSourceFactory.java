@@ -4,6 +4,9 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import net.baublase.bansystem.config.DatabaseSettings;
 
+/**
+ * HikariCP-Pool. Hikari wird geshadet, der Postgres-Treiber nicht.
+ */
 public final class HikariDataSourceFactory {
 
     private HikariDataSourceFactory() {

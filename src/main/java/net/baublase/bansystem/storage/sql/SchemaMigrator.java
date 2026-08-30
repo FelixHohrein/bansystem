@@ -5,6 +5,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * CREATE TABLE IF NOT EXISTS — kein Flyway, Schema ist bewusst klein.
+ */
 public final class SchemaMigrator {
 
     private SchemaMigrator() {

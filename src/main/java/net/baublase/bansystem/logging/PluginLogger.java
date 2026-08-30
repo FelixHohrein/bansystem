@@ -6,6 +6,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.function.BooleanSupplier;
 import java.util.logging.Level;
 
+/**
+ * Debug-Logs nur wenn config.yml debug: true.
+ */
 @RequiredArgsConstructor
 public final class PluginLogger {
 

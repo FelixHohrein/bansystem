@@ -4,6 +4,9 @@ import lombok.Getter;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
+/**
+ * Inventar-Halter, damit der Click-Listener das {@link GuiMenu} wiederfindet.
+ */
 @Getter
 public final class MenuHolder implements InventoryHolder {
 

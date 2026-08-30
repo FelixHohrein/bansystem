@@ -6,6 +6,7 @@ import lombok.Value;
 import java.time.Instant;
 import java.util.UUID;
 
+/** Spieler, der mindestens einmal auf diesem Server war. */
 @Value
 @Builder(toBuilder = true)
 public class KnownPlayer {

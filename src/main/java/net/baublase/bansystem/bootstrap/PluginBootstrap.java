@@ -8,7 +8,6 @@ import net.baublase.bansystem.application.PunishExecutor;
 import net.baublase.bansystem.application.SessionTracker;
 import net.baublase.bansystem.application.TemplateService;
 import net.baublase.bansystem.bukkit.KickBanScreen;
-import net.baublase.bansystem.bukkit.PublicAreaRegistry;
 import net.baublase.bansystem.command.BansCommand;
 import net.baublase.bansystem.command.InfoCommands;
 import net.baublase.bansystem.command.PunishmentCommands;
@@ -33,6 +32,9 @@ import org.bukkit.command.PluginCommand;
 
 import java.io.File;
 
+/**
+ * Verdrahtet Config, Storage, Commands und Listener beim Plugin-Start.
+ */
 public final class PluginBootstrap {
 
     private final BanSystemPlugin plugin;
@@ -46,7 +48,7 @@ public final class PluginBootstrap {
         plugin.saveDefaultConfig();
         PluginConfiguration configuration = new PluginConfiguration(plugin.getConfig());
         plugin.configuration(configuration);
-        plugin.pluginLogger(new PluginLogger(plugin, configuration::isDebug));
+        plugin.pluginLogger(new PluginLogger(plugin, () -> plugin.configuration().isDebug()));
         plugin.scheduler(new TaskScheduler(plugin));
 
         File langFolder = new File(plugin.getDataFolder(), "lang");
@@ -74,8 +76,7 @@ public final class PluginBootstrap {
         plugin.templateService(new TemplateService(templateStore));
         plugin.banService(new BanService(storage, plugin.pluginLogger()));
         plugin.sessionTracker(new SessionTracker(storage, plugin.pluginLogger()));
-        PublicAreaRegistry publicAreas = new PublicAreaRegistry(configuration);
-        plugin.altCheckService(new AltCheckService(storage, configuration, publicAreas));
+        plugin.altCheckService(new AltCheckService(plugin, storage));
         KickBanScreen kickBanScreen = new KickBanScreen(messages);
         plugin.punishExecutor(new PunishExecutor(
                 plugin,
@@ -85,7 +86,7 @@ public final class PluginBootstrap {
                 kickBanScreen,
                 messages
         ));
-        plugin.pendingActions(new PendingPunishActions(plugin));
+        plugin.pendingActions(new PendingPunishActions());
         plugin.skullFactory(new SkullFactory(plugin));
 
         registerCommands();
@@ -94,8 +95,27 @@ public final class PluginBootstrap {
         plugin.getServer().getPluginManager().registerEvents(new GuiListener(), plugin);
         plugin.getServer().getPluginManager().registerEvents(new ChatInputListener(plugin), plugin);
 
+        if (storage.isEnabled()) {
+            plugin.scheduler().runAsync(() -> {
+                plugin.banService().refreshNameCache();
+                plugin.banService().deactivateExpired();
+            });
+            plugin.scheduler().runAsyncTimer(plugin.banService()::deactivateExpired, 20L * 60 * 5, 20L * 60 * 5);
+        }
+
         plugin.pluginLogger().info("Ban-System geladen. Datenbank aktiv: " + storage.isEnabled());
         return true;
+    }
+
+    /**
+     * Lädt Config, Sprache und Templates neu. Die Datenbankverbindung bleibt bestehen.
+     */
+    public void reload() {
+        plugin.reloadConfig();
+        plugin.configuration(new PluginConfiguration(plugin.getConfig()));
+        plugin.messages().reload();
+        plugin.templateService().reload();
+        plugin.pluginLogger().info("Reload abgeschlossen (ohne Datenbank-Reconnect).");
     }
 
     public void shutdown() {

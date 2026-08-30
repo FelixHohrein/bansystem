@@ -7,12 +7,18 @@ import net.baublase.bansystem.gui.GuiMenu;
 import net.baublase.bansystem.gui.GuiSounds;
 import net.baublase.bansystem.gui.input.PendingPunishActions;
 import net.baublase.bansystem.i18n.Message;
+import net.baublase.bansystem.util.DurationFormatter;
+import net.baublase.bansystem.util.DurationParser;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Schnelle Dauer-Buttons statt zuerst in den Chat zu müssen.
@@ -33,14 +39,14 @@ public final class DurationMenu extends GuiMenu {
         Inventory inventory = create(player, 27, Message.GUI_DURATION_TITLE);
         int[] slots = {10, 11, 12, 14, 15, 16};
         for (int i = 0; i < PRESETS.length; i++) {
-            inventory.setItem(slots[i], button(
+            Duration parsed = DurationParser.parse(PRESETS[i]).orElse(Duration.ofDays(1));
+            ItemStack clock = named(
                     Material.CLOCK,
-                    player,
-                    "duration",
-                    PRESETS[i],
-                    Message.GUI_DURATION_PRESET,
-                    "duration", PRESETS[i]
-            ));
+                    messages.component(locale(player), Message.GUI_DURATION_PRESET, "duration", PRESETS[i]),
+                    List.of(Component.text(DurationFormatter.format(parsed, messages, locale(player)), NamedTextColor.AQUA))
+            );
+            GuiKeys.setAction(plugin, clock, GuiKeys.DURATION, PRESETS[i]);
+            inventory.setItem(slots[i], clock);
         }
         inventory.setItem(22, button(Material.NAME_TAG, player, GuiKeys.CUSTOM_DURATION, Message.GUI_CUSTOM_DURATION, Message.PROMPT_DURATION));
         inventory.setItem(18, button(Material.ARROW, player, GuiKeys.BACK, Message.GUI_BACK));
@@ -61,8 +67,8 @@ public final class DurationMenu extends GuiMenu {
             messages.send(player, Message.PROMPT_DURATION);
             return;
         }
-        if ("duration".equals(action) && payload != null) {
-            Duration duration = net.baublase.bansystem.util.DurationParser.parse(payload).orElse(Duration.ofDays(1));
+        if (GuiKeys.DURATION.equals(action) && payload != null) {
+            Duration duration = DurationParser.parse(payload).orElse(Duration.ofDays(1));
             new ReasonMenu(plugin, target, false, duration).open(player);
         }
     }

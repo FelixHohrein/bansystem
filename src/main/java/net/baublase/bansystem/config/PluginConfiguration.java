@@ -8,6 +8,9 @@ import org.bukkit.configuration.file.FileConfiguration;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Debug, Spawn-Ausschluss und Alt-Score-Gewichte aus config.yml.
+ */
 @Getter
 public final class PluginConfiguration {
 

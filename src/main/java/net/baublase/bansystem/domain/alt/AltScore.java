@@ -6,6 +6,7 @@ import net.baublase.bansystem.domain.player.PlayerRef;
 
 import java.util.List;
 
+/** Gesamtscore und Liste verdächtiger Accounts. */
 @Value
 @Builder
 public class AltScore {

@@ -4,6 +4,7 @@ import net.baublase.bansystem.BanSystemPlugin;
 import net.baublase.bansystem.domain.player.PlayerRef;
 import net.baublase.bansystem.domain.template.BanTemplate;
 import net.baublase.bansystem.gui.GuiKeys;
+import net.baublase.bansystem.gui.GuiLayouts;
 import net.baublase.bansystem.gui.GuiMenu;
 import net.baublase.bansystem.gui.GuiSounds;
 import net.baublase.bansystem.gui.input.PendingPunishActions;
@@ -45,15 +46,12 @@ public final class ReasonMenu extends GuiMenu {
             if (slot >= 44) {
                 break;
             }
-            if (slot % 9 == 8) {
-                slot += 2;
-            }
             ItemStack paper = named(Material.PAPER,
                     Component.text(template.getName(), NamedTextColor.GOLD),
                     List.of(Component.text(template.getReason(), NamedTextColor.WHITE)));
-            GuiKeys.setAction(plugin, paper, "template-reason", template.getId());
+            GuiKeys.setAction(plugin, paper, GuiKeys.TEMPLATE_REASON, template.getId());
             inventory.setItem(slot, paper);
-            slot++;
+            slot = GuiLayouts.nextInner(slot);
         }
         inventory.setItem(45, button(Material.ARROW, player, GuiKeys.BACK, Message.GUI_BACK));
         GuiSounds.open(player);
@@ -75,7 +73,7 @@ public final class ReasonMenu extends GuiMenu {
             messages.send(player, Message.PROMPT_REASON);
             return;
         }
-        if ("template-reason".equals(action) && payload != null) {
+        if (GuiKeys.TEMPLATE_REASON.equals(action) && payload != null) {
             plugin.templateService().find(payload).ifPresent(template ->
                     new ConfirmMenu(plugin, new PunishDraft(target, permanent, duration, template.getReason(), template.getId())).open(player));
         }

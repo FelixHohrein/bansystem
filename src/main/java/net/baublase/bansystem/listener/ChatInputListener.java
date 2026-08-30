@@ -8,6 +8,7 @@ import net.baublase.bansystem.gui.GuiSounds;
 import net.baublase.bansystem.gui.input.PendingPunishActions;
 import net.baublase.bansystem.gui.input.PunishDraft;
 import net.baublase.bansystem.gui.menu.ConfirmMenu;
+import net.baublase.bansystem.gui.menu.PlayerBrowserMenu;
 import net.baublase.bansystem.gui.menu.PunishMenu;
 import net.baublase.bansystem.gui.menu.ReasonMenu;
 import net.baublase.bansystem.i18n.Message;
@@ -19,6 +20,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -54,8 +56,8 @@ public final class ChatInputListener implements Listener {
             return;
         }
         switch (pending.step()) {
-            case SEARCH -> plugin.scheduler().supplyAsync(() -> plugin.banService().known(text)).thenAccept(known ->
-                    plugin.scheduler().runSync(() -> openSearch(player, text, known)));
+            case SEARCH -> plugin.scheduler().supplyAsync(() -> plugin.banService().search(text)).thenAccept(found ->
+                    plugin.scheduler().runSync(() -> openSearch(player, text, found)));
             case REASON_PERMANENT -> new ConfirmMenu(plugin, new PunishDraft(pending.target(), true, null, text, null)).open(player);
             case DURATION_TEMPORARY -> {
                 Optional<Duration> duration = DurationParser.parse(text);
@@ -73,14 +75,21 @@ public final class ChatInputListener implements Listener {
         }
     }
 
-    private void openSearch(Player player, String query, Optional<KnownPlayer> known) {
-        if (known.isEmpty()) {
+    private void openSearch(Player player, String query, List<KnownPlayer> found) {
+        if (found.isEmpty()) {
             plugin.messages().send(player, Message.ERROR_UNKNOWN_PLAYER, "player", query);
             GuiSounds.deny(player);
             return;
         }
-        KnownPlayer target = known.get();
         GuiSounds.success(player);
-        new PunishMenu(plugin, PlayerRef.builder().uuid(target.getUuid()).name(target.getName()).build()).open(player);
+        if (found.size() == 1) {
+            KnownPlayer target = found.getFirst();
+            new PunishMenu(plugin, PlayerRef.builder().uuid(target.getUuid()).name(target.getName()).build()).open(player);
+            return;
+        }
+        List<PlayerRef> refs = found.stream()
+                .map(known -> PlayerRef.builder().uuid(known.getUuid()).name(known.getName()).build())
+                .toList();
+        new PlayerBrowserMenu(plugin, refs, 0).open(player);
     }
 }

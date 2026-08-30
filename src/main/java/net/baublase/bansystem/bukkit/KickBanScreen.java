@@ -9,6 +9,9 @@ import org.bukkit.entity.Player;
 
 import java.util.Locale;
 
+/**
+ * Ban-Kick-Text: permanent vs. temporär mit Restzeit.
+ */
 public final class KickBanScreen {
 
     private final MessageService messages;

@@ -8,11 +8,21 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Lädt MiniMessage-Texte aus lang/de.yml und lang/en.yml. Fallback ist immer Deutsch.
+ */
 public final class YamlMessageCatalog {
 
+    private final File langFolder;
     private final Map<Locale, Map<Message, String>> lines = new HashMap<>();
 
     public YamlMessageCatalog(File langFolder) {
+        this.langFolder = langFolder;
+        reload();
+    }
+
+    public void reload() {
+        lines.clear();
         load(Locale.GERMAN, new File(langFolder, "de.yml"));
         load(Locale.ENGLISH, new File(langFolder, "en.yml"));
     }
