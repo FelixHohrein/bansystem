@@ -1,0 +1,29 @@
+templates:
+  hacking:
+    name: Hacking
+    duration: 7d
+    reason: Hacking
+  cheating:
+    name: Cheating
+    duration: 7d
+    reason: Cheating
+  verbal-abuse:
+    name: Verbal Abuse
+    duration: 1d
+    reason: Verbal Abuse
+  hate-speech:
+    name: Hetze
+    duration: 30d
+    reason: Hetze
+  privilege-abuse:
+    name: Rechteausnutzung
+    duration: 30d
+    reason: Rechteausnutzung
+  spamming:
+    name: Spamming
+    duration: 1d
+    reason: Spamming
+  permanent-ban:
+    name: Permanent
+    duration: permanent
+    reason: Schwerwiegender Regelbruch

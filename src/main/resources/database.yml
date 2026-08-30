@@ -1,0 +1,14 @@
+# PostgreSQL. Beim ersten Start auf false lassen — das Plugin startet ohne DB und ohne Fehler.
+# Werte eintragen, dann connection-allowed: true setzen und Server/Plugin neu laden.
+connection-allowed: false
+
+host: localhost
+port: 5432
+database: bansystem
+username: postgres
+password: ""
+
+pool:
+  maximum-pool-size: 10
+  minimum-idle: 2
+  connection-timeout-ms: 10000

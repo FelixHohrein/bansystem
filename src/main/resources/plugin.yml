@@ -5,3 +5,68 @@ api-version: "1.21"
 description: Ban-System Plugin für Baublase.net
 author: Felix
 load: STARTUP
+
+commands:
+  bans:
+    description: Öffnet das Ban-System-Menü oder die Hilfe
+    usage: /bans [spieler|help|templates]
+    aliases: [bansystem]
+  ban:
+    description: Bannt einen Spieler permanent
+    usage: /ban <spieler> <grund>
+  tempban:
+    description: Bannt einen Spieler temporär
+    usage: /tempban <spieler> <dauer> <grund>
+  unban:
+    description: Entbannt einen Spieler
+    usage: /unban <spieler>
+  banhistory:
+    description: Zeigt die Ban-Historie eines Spielers
+    usage: /banhistory <spieler>
+  altcheck:
+    description: Zeigt mögliche Alt-Accounts und den Alt-Score
+    usage: /altcheck <spieler>
+  bantemplate:
+    description: Verwaltet Ban-Templates
+    usage: /bantemplate <list|set|delete> [id] [dauer] [grund]
+
+permissions:
+  bansystem.gui:
+    description: Öffnet das /bans-Menü
+    default: op
+  bansystem.ban:
+    description: Permanente Bans
+    default: op
+  bansystem.tempban:
+    description: Temporäre Bans
+    default: op
+  bansystem.unban:
+    description: Spieler entbannen
+    default: op
+  bansystem.history:
+    description: Ban-Historie einsehen
+    default: op
+  bansystem.altcheck:
+    description: Alt-Check und Score
+    default: op
+  bansystem.template:
+    description: Templates anlegen und überschreiben
+    default: op
+  bansystem.bypass:
+    description: Immunität gegen Bans
+    default: false
+  bansystem.bypass.override:
+    description: Darf immune Spieler trotzdem bannen
+    default: op
+  bansystem.admin:
+    description: Alle Ban-System-Rechte
+    default: op
+    children:
+      bansystem.gui: true
+      bansystem.ban: true
+      bansystem.tempban: true
+      bansystem.unban: true
+      bansystem.history: true
+      bansystem.altcheck: true
+      bansystem.template: true
+      bansystem.bypass.override: true

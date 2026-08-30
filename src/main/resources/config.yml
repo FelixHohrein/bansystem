@@ -1,0 +1,18 @@
+debug: false
+
+# Chunks um den World-Spawn und extra öffentliche Gebiete zählen nicht für den Alt-Score.
+excluded-areas:
+  spawn-chunk-radius: 8
+  worlds-using-world-spawn:
+    - world
+  extra-chunks: []
+  # extra-chunks:
+  #   - {world: world, x: 10, z: 12}
+
+alt-score:
+  same-ip-current: 40
+  same-ip-history: 25
+  never-online-together: 15
+  similar-login-hours: 10
+  same-chunk: 10
+  same-locale-and-brand: 5
