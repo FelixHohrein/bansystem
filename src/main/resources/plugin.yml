@@ -1,0 +1,7 @@
+name: BaublaseBanSystem
+version: ${project.version}
+main: net.baublase.bansystem.BanSystemPlugin
+api-version: "1.21"
+description: Ban-System Plugin für Baublase.net
+author: Felix
+load: STARTUP

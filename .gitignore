@@ -1,0 +1,24 @@
+# Maven
+target/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.vscode/
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs / build leftovers
+*.log
+*.class
+hs_err_pid*
+replay_pid*
