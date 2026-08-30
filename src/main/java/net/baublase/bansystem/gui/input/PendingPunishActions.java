@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class PendingPunishActions {
 
     public enum Step {
+        SEARCH,
         REASON_PERMANENT,
         DURATION_TEMPORARY,
         REASON_TEMPORARY,

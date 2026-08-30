@@ -19,6 +19,9 @@ import net.baublase.bansystem.storage.Storage;
 import net.baublase.bansystem.util.TaskScheduler;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Einstiegspunkt. Hält nur verdrahtete Services, keine Fachlogik.
+ */
 @Getter
 @Setter
 @Accessors(fluent = true)

@@ -33,6 +33,7 @@ public final class SessionListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        plugin.pendingActions().remove(event.getPlayer().getUniqueId());
         if (!plugin.storage().isEnabled()) {
             return;
         }

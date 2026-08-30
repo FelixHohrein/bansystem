@@ -2,7 +2,9 @@ package net.baublase.bansystem.gui.menu;
 
 import net.baublase.bansystem.BanSystemPlugin;
 import net.baublase.bansystem.domain.template.BanTemplate;
+import net.baublase.bansystem.gui.GuiKeys;
 import net.baublase.bansystem.gui.GuiMenu;
+import net.baublase.bansystem.gui.GuiSounds;
 import net.baublase.bansystem.i18n.Message;
 import net.baublase.bansystem.util.DurationFormatter;
 import net.kyori.adventure.text.Component;
@@ -25,10 +27,13 @@ public final class TemplateMenu extends GuiMenu {
     public void open(Player player) {
         Inventory inventory = create(player, 54, Message.GUI_TEMPLATES_TITLE);
         Locale locale = locale(player);
-        int slot = 0;
+        int slot = 10;
         for (BanTemplate template : plugin.templateService().list()) {
-            if (slot >= 45) {
+            if (slot >= 44) {
                 break;
+            }
+            if (slot % 9 == 8) {
+                slot += 2;
             }
             String duration = DurationFormatter.format(template.getDuration(), messages, locale);
             inventory.setItem(slot, named(Material.PAPER,
@@ -40,13 +45,14 @@ public final class TemplateMenu extends GuiMenu {
                     )));
             slot++;
         }
-        inventory.setItem(49, item(Material.BARRIER, player, Message.GUI_BACK, null));
+        inventory.setItem(45, button(Material.ARROW, player, GuiKeys.BACK, Message.GUI_BACK));
+        GuiSounds.open(player);
         player.openInventory(inventory);
     }
 
     @Override
-    public void onClick(InventoryClickEvent event) {
-        if (event.getRawSlot() == 49 && event.getWhoClicked() instanceof Player player) {
+    public void onAction(Player player, String action, String payload, InventoryClickEvent event) {
+        if (GuiKeys.BACK.equals(action)) {
             new MainMenu(plugin).open(player);
         }
     }
