@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import net.baublase.bansystem.application.AltCheckService;
 import net.baublase.bansystem.application.BanService;
+import net.baublase.bansystem.application.LocationTracker;
 import net.baublase.bansystem.application.PunishExecutor;
 import net.baublase.bansystem.application.SessionTracker;
 import net.baublase.bansystem.application.TemplateService;
@@ -35,6 +36,7 @@ public final class BanSystemPlugin extends JavaPlugin {
     private Storage storage;
     private BanService banService;
     private SessionTracker sessionTracker;
+    private LocationTracker locationTracker;
     private AltCheckService altCheckService;
     private TemplateService templateService;
     private PunishExecutor punishExecutor;

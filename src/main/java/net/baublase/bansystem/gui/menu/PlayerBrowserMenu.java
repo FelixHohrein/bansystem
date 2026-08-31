@@ -116,7 +116,8 @@ public final class PlayerBrowserMenu extends GuiMenu {
             AltScore score = plugin.altCheckService().score(ref.getUuid());
             List<Ban> history = plugin.banService().history(ref.getUuid());
             boolean banned = plugin.banService().activeBan(ref.getUuid()).isPresent();
-            ItemStack head = skulls.head(ref, score, history, banned, locale(viewer));
+            boolean immune = plugin.punishExecutor().isImmune(viewer, Bukkit.getPlayer(ref.getUuid()));
+            ItemStack head = skulls.head(ref, score, history, banned, immune, locale(viewer));
             GuiKeys.setAction(plugin, head, GuiKeys.PLAYER, ref.getUuid() + ":" + ref.getName());
             if (banned) {
                 GuiItems.glow(head);

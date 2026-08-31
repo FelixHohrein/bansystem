@@ -34,6 +34,12 @@ public final class SessionListener implements Listener {
         plugin.scheduler().runAsync(() -> {
             plugin.sessionTracker().onJoin(known, session);
             plugin.banService().remember(known.getUuid(), known.getName());
+            plugin.locationTracker().record(
+                    known.getUuid(),
+                    known.getLastWorld(),
+                    known.getLastChunkX(),
+                    known.getLastChunkZ()
+            );
         });
         // Client-Brand kommt oft erst nach dem Join — einmal nachziehen.
         plugin.scheduler().runLater(() -> {
@@ -55,7 +61,15 @@ public final class SessionListener implements Listener {
         Instant now = Instant.now();
         KnownPlayer known = snapshot(player, now);
         PlayerSession session = session(player, now, now);
-        plugin.scheduler().runAsync(() -> plugin.sessionTracker().onQuit(known, session));
+        plugin.scheduler().runAsync(() -> {
+            plugin.sessionTracker().onQuit(known, session);
+            plugin.locationTracker().record(
+                    known.getUuid(),
+                    known.getLastWorld(),
+                    known.getLastChunkX(),
+                    known.getLastChunkZ()
+            );
+        });
     }
 
     private KnownPlayer snapshot(Player player, Instant now) {

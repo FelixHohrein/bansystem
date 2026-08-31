@@ -2,14 +2,17 @@ package net.baublase.bansystem.application;
 
 import net.baublase.bansystem.BanSystemPlugin;
 import net.baublase.bansystem.bukkit.PublicAreaRegistry;
+import net.baublase.bansystem.config.PluginConfiguration;
 import net.baublase.bansystem.domain.alt.AltMatch;
 import net.baublase.bansystem.domain.alt.AltScore;
 import net.baublase.bansystem.domain.player.KnownPlayer;
+import net.baublase.bansystem.domain.player.PlayerLocation;
 import net.baublase.bansystem.domain.player.PlayerRef;
 import net.baublase.bansystem.domain.player.PlayerSession;
 import net.baublase.bansystem.storage.Storage;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -23,9 +26,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Alt-Score 0–100 aus Vanilla-Signalen (IP, Sessions, Login-Stunden, private Chunks, Locale+Brand).
+ * Alt-Score 0–100, berechnet immer live aus der Historie.
+ * Punkte wachsen, wenn sich Signale über mehrere Tage wiederholen (gleiche IP, gleiche private Chunks, ähnliche Login-Stunden).
  */
 public final class AltCheckService {
+
+    private static final ZoneId ZONE = ZoneId.systemDefault();
 
     private final BanSystemPlugin plugin;
     private final Storage storage;
@@ -47,6 +53,7 @@ public final class AltCheckService {
                     .build();
         }
         List<PlayerSession> ownSessions = storage.getSessions().findByUuid(targetUuid);
+        List<PlayerLocation> ownLocations = storage.getLocations().findByUuid(targetUuid);
         Set<String> ips = ownSessions.stream().map(PlayerSession::getIp).filter(Objects::nonNull).collect(Collectors.toSet());
         List<PlayerSession> related = storage.getSessions().findByIps(ips);
         Map<UUID, List<PlayerSession>> byPlayer = new HashMap<>();
@@ -63,7 +70,8 @@ public final class AltCheckService {
             if (other == null) {
                 continue;
             }
-            int value = compute(target, ownSessions, other, entry.getValue());
+            List<PlayerLocation> otherLocations = storage.getLocations().findByUuid(entry.getKey());
+            int value = compute(target, ownSessions, ownLocations, other, entry.getValue(), otherLocations);
             if (value <= 0) {
                 continue;
             }
@@ -100,30 +108,175 @@ public final class AltCheckService {
         return PlayerRef.builder().uuid(oldest.getUuid()).name(oldest.getName()).build();
     }
 
-    private int compute(KnownPlayer target, List<PlayerSession> own, KnownPlayer other, List<PlayerSession> theirs) {
+    private int compute(
+            KnownPlayer target,
+            List<PlayerSession> own,
+            List<PlayerLocation> ownLocations,
+            KnownPlayer other,
+            List<PlayerSession> theirs,
+            List<PlayerLocation> otherLocations
+    ) {
+        PluginConfiguration.AltScoreWeights weights = plugin.configuration().getAltScoreWeights();
         int score = 0;
         String ownLastIp = lastIp(own);
         String otherLastIp = lastIp(theirs);
-        boolean currentIp = ownLastIp != null && ownLastIp.equals(otherLastIp);
-        if (currentIp) {
-            score += plugin.configuration().getAltScoreWeights().getSameIpCurrent();
-        } else if (sharesIp(own, theirs)) {
-            score += plugin.configuration().getAltScoreWeights().getSameIpHistory();
+        if (ownLastIp != null && ownLastIp.equals(otherLastIp)) {
+            score += weights.getSameIpCurrent();
+        }
+        int sharedIpDays = sharedIpDays(own, theirs);
+        int sharedIps = sharedIpCount(own, theirs);
+        if (sharedIpDays > 0) {
+            double dayFactor = Math.min(1.0, sharedIpDays / 5.0);
+            double ipFactor = Math.min(1.0, sharedIps / 3.0);
+            score += (int) Math.round(weights.getSameIpHistory() * Math.max(dayFactor, ipFactor * 0.6));
         }
         if (!overlaps(own, theirs)) {
-            score += plugin.configuration().getAltScoreWeights().getNeverOnlineTogether();
+            score += weights.getNeverOnlineTogether();
         }
-        if (similarHours(own, theirs)) {
-            score += plugin.configuration().getAltScoreWeights().getSimilarLoginHours();
+        int similarHourDays = similarLoginDays(own, theirs);
+        if (similarHourDays > 0) {
+            score += (int) Math.round(weights.getSimilarLoginHours() * Math.min(1.0, similarHourDays / 4.0));
         }
-        if (samePrivateChunk(target, other)) {
-            score += plugin.configuration().getAltScoreWeights().getSameChunk();
+        int locationDays = sharedPrivateLocationDays(ownLocations, otherLocations);
+        int uniqueChunks = sharedPrivateChunks(ownLocations, otherLocations);
+        if (locationDays > 0 || uniqueChunks > 0) {
+            double dayFactor = Math.min(1.0, locationDays / 4.0);
+            double chunkFactor = Math.min(1.0, uniqueChunks / 3.0);
+            score += (int) Math.round(weights.getSameChunk() * Math.max(dayFactor, chunkFactor));
+        } else if (samePrivateChunk(target, other)) {
+            score += Math.max(1, weights.getSameChunk() / 3);
         }
         if (target.getLocale() != null && target.getLocale().equalsIgnoreCase(other.getLocale())
                 && target.getClientBrand() != null && target.getClientBrand().equalsIgnoreCase(other.getClientBrand())) {
-            score += plugin.configuration().getAltScoreWeights().getSameLocaleAndBrand();
+            score += weights.getSameLocaleAndBrand();
         }
-        return score;
+        return Math.min(100, score);
+    }
+
+    private int sharedIpDays(List<PlayerSession> own, List<PlayerSession> theirs) {
+        Map<LocalDate, Set<String>> ownDays = ipsByDay(own);
+        Map<LocalDate, Set<String>> theirDays = ipsByDay(theirs);
+        int days = 0;
+        for (Map.Entry<LocalDate, Set<String>> entry : ownDays.entrySet()) {
+            Set<String> otherIps = theirDays.get(entry.getKey());
+            if (otherIps == null) {
+                continue;
+            }
+            for (String ip : entry.getValue()) {
+                if (otherIps.contains(ip)) {
+                    days++;
+                    break;
+                }
+            }
+        }
+        return days;
+    }
+
+    private int sharedIpCount(List<PlayerSession> own, List<PlayerSession> theirs) {
+        Set<String> ownIps = own.stream().map(PlayerSession::getIp).filter(Objects::nonNull).collect(Collectors.toSet());
+        ownIps.retainAll(theirs.stream().map(PlayerSession::getIp).filter(Objects::nonNull).collect(Collectors.toSet()));
+        return ownIps.size();
+    }
+
+    private Map<LocalDate, Set<String>> ipsByDay(List<PlayerSession> sessions) {
+        Map<LocalDate, Set<String>> byDay = new HashMap<>();
+        for (PlayerSession session : sessions) {
+            if (session.getIp() == null) {
+                continue;
+            }
+            LocalDate start = session.getJoinedAt().atZone(ZONE).toLocalDate();
+            LocalDate end = (session.getQuitAt() == null ? Instant.now() : session.getQuitAt()).atZone(ZONE).toLocalDate();
+            for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
+                byDay.computeIfAbsent(day, ignored -> new HashSet<>()).add(session.getIp());
+            }
+        }
+        return byDay;
+    }
+
+    private int similarLoginDays(List<PlayerSession> own, List<PlayerSession> theirs) {
+        Map<LocalDate, Integer> ownPeaks = peakHourByDay(own);
+        Map<LocalDate, Integer> theirPeaks = peakHourByDay(theirs);
+        int days = 0;
+        for (Map.Entry<LocalDate, Integer> entry : ownPeaks.entrySet()) {
+            Integer other = theirPeaks.get(entry.getKey());
+            if (other == null) {
+                continue;
+            }
+            int diff = Math.abs(entry.getValue() - other);
+            if (Math.min(diff, 24 - diff) <= 1) {
+                days++;
+            }
+        }
+        return days;
+    }
+
+    private Map<LocalDate, Integer> peakHourByDay(List<PlayerSession> sessions) {
+        Map<LocalDate, int[]> hours = new HashMap<>();
+        for (PlayerSession session : sessions) {
+            LocalDate day = session.getJoinedAt().atZone(ZONE).toLocalDate();
+            hours.computeIfAbsent(day, ignored -> new int[24])[session.getJoinedAt().atZone(ZONE).getHour()]++;
+        }
+        Map<LocalDate, Integer> peaks = new HashMap<>();
+        for (Map.Entry<LocalDate, int[]> entry : hours.entrySet()) {
+            int[] counts = entry.getValue();
+            int peak = 0;
+            for (int i = 1; i < 24; i++) {
+                if (counts[i] > counts[peak]) {
+                    peak = i;
+                }
+            }
+            if (counts[peak] > 0) {
+                peaks.put(entry.getKey(), peak);
+            }
+        }
+        return peaks;
+    }
+
+    private int sharedPrivateLocationDays(List<PlayerLocation> own, List<PlayerLocation> theirs) {
+        Set<String> theirKeys = new HashSet<>();
+        for (PlayerLocation location : theirs) {
+            if (!publicAreas.isExcluded(location.getWorld(), location.getChunkX(), location.getChunkZ())) {
+                theirKeys.add(dayChunkKey(location));
+            }
+        }
+        Set<LocalDate> days = new HashSet<>();
+        for (PlayerLocation location : own) {
+            if (publicAreas.isExcluded(location.getWorld(), location.getChunkX(), location.getChunkZ())) {
+                continue;
+            }
+            if (theirKeys.contains(dayChunkKey(location))) {
+                days.add(location.getSeenOn());
+            }
+        }
+        return days.size();
+    }
+
+    private int sharedPrivateChunks(List<PlayerLocation> own, List<PlayerLocation> theirs) {
+        Set<String> theirChunks = new HashSet<>();
+        for (PlayerLocation location : theirs) {
+            if (!publicAreas.isExcluded(location.getWorld(), location.getChunkX(), location.getChunkZ())) {
+                theirChunks.add(chunkKey(location));
+            }
+        }
+        Set<String> shared = new HashSet<>();
+        for (PlayerLocation location : own) {
+            if (publicAreas.isExcluded(location.getWorld(), location.getChunkX(), location.getChunkZ())) {
+                continue;
+            }
+            String key = chunkKey(location);
+            if (theirChunks.contains(key)) {
+                shared.add(key);
+            }
+        }
+        return shared.size();
+    }
+
+    private String dayChunkKey(PlayerLocation location) {
+        return location.getSeenOn() + "|" + chunkKey(location);
+    }
+
+    private String chunkKey(PlayerLocation location) {
+        return location.getWorld() + ":" + location.getChunkX() + ":" + location.getChunkZ();
     }
 
     private boolean samePrivateChunk(KnownPlayer target, KnownPlayer other) {
@@ -146,11 +299,6 @@ public final class AltCheckService {
                 .orElse(null);
     }
 
-    private boolean sharesIp(List<PlayerSession> own, List<PlayerSession> theirs) {
-        Set<String> ips = own.stream().map(PlayerSession::getIp).collect(Collectors.toSet());
-        return theirs.stream().map(PlayerSession::getIp).anyMatch(ips::contains);
-    }
-
     private boolean overlaps(List<PlayerSession> own, List<PlayerSession> theirs) {
         for (PlayerSession a : own) {
             Instant aEnd = a.getQuitAt() == null ? Instant.now() : a.getQuitAt();
@@ -163,32 +311,5 @@ public final class AltCheckService {
             }
         }
         return false;
-    }
-
-    private boolean similarHours(List<PlayerSession> own, List<PlayerSession> theirs) {
-        int ownPeak = peakHour(own);
-        int otherPeak = peakHour(theirs);
-        if (ownPeak < 0 || otherPeak < 0) {
-            return false;
-        }
-        int diff = Math.abs(ownPeak - otherPeak);
-        return Math.min(diff, 24 - diff) <= 1;
-    }
-
-    private int peakHour(List<PlayerSession> sessions) {
-        if (sessions.isEmpty()) {
-            return -1;
-        }
-        int[] hours = new int[24];
-        for (PlayerSession session : sessions) {
-            hours[session.getJoinedAt().atZone(ZoneId.systemDefault()).getHour()]++;
-        }
-        int peak = 0;
-        for (int i = 1; i < 24; i++) {
-            if (hours[i] > hours[peak]) {
-                peak = i;
-            }
-        }
-        return hours[peak] == 0 ? -1 : peak;
     }
 }

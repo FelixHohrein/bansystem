@@ -71,8 +71,12 @@ public final class PunishMenu extends GuiMenu {
         GuiKeys.setAction(plugin, head, GuiKeys.HISTORY);
         inventory.setItem(4, head);
 
-        inventory.setItem(19, button(Material.RED_CONCRETE, player, GuiKeys.BAN_PERM, Message.GUI_BAN_PERMANENT, Message.GUI_BAN_PERMANENT_LORE));
-        inventory.setItem(21, button(Material.ORANGE_CONCRETE, player, GuiKeys.BAN_TEMP, Message.GUI_BAN_TEMPORARY, Message.GUI_BAN_TEMPORARY_LORE));
+        inventory.setItem(19, immune
+                ? locked(player, Message.GUI_BAN_PERMANENT)
+                : button(Material.RED_CONCRETE, player, GuiKeys.BAN_PERM, Message.GUI_BAN_PERMANENT, Message.GUI_BAN_PERMANENT_LORE));
+        inventory.setItem(21, immune
+                ? locked(player, Message.GUI_BAN_TEMPORARY)
+                : button(Material.ORANGE_CONCRETE, player, GuiKeys.BAN_TEMP, Message.GUI_BAN_TEMPORARY, Message.GUI_BAN_TEMPORARY_LORE));
         if (banned) {
             inventory.setItem(23, GuiItems.glow(button(Material.LIME_CONCRETE, player, GuiKeys.UNBAN, Message.GUI_UNBAN, Message.GUI_UNBAN_LORE)));
         } else {
@@ -89,13 +93,17 @@ public final class PunishMenu extends GuiMenu {
             ItemStack paper = named(Material.PAPER,
                     messages.component(locale(player), Message.GUI_APPLY_TEMPLATE, "name", template.getName()),
                     List.of(Component.text(template.getReason(), NamedTextColor.GRAY)));
-            GuiKeys.setAction(plugin, paper, GuiKeys.APPLY_TEMPLATE, template.getId());
+            GuiKeys.setAction(plugin, paper, immune ? GuiKeys.IGNORE : GuiKeys.APPLY_TEMPLATE, template.getId());
             inventory.setItem(slot, paper);
             slot++;
         }
         inventory.setItem(45, button(Material.ARROW, player, GuiKeys.BACK, Message.GUI_BACK));
         GuiSounds.open(player);
         player.openInventory(inventory);
+    }
+
+    private ItemStack locked(Player player, Message name) {
+        return button(Material.GRAY_CONCRETE, player, GuiKeys.IGNORE, name, Message.GUI_BAN_LOCKED);
     }
 
     @Override

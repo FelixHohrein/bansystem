@@ -4,7 +4,9 @@ import net.baublase.bansystem.BanSystemPlugin;
 import net.baublase.bansystem.application.AltCheckService;
 import net.baublase.bansystem.application.BanService;
 import net.baublase.bansystem.application.ImmunityService;
+import net.baublase.bansystem.application.LocationTracker;
 import net.baublase.bansystem.application.PunishExecutor;
+import net.baublase.bansystem.domain.player.KnownPlayer;
 import net.baublase.bansystem.application.SessionTracker;
 import net.baublase.bansystem.application.TemplateService;
 import net.baublase.bansystem.bukkit.KickBanScreen;
@@ -28,9 +30,14 @@ import net.baublase.bansystem.listener.SessionListener;
 import net.baublase.bansystem.logging.PluginLogger;
 import net.baublase.bansystem.storage.Storage;
 import net.baublase.bansystem.util.TaskScheduler;
+import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Verdrahtet Config, Storage, Commands und Listener beim Plugin-Start.
@@ -76,6 +83,7 @@ public final class PluginBootstrap {
         plugin.templateService(new TemplateService(templateStore));
         plugin.banService(new BanService(storage, plugin.pluginLogger()));
         plugin.sessionTracker(new SessionTracker(storage, plugin.pluginLogger()));
+        plugin.locationTracker(new LocationTracker(storage));
         plugin.altCheckService(new AltCheckService(plugin, storage));
         KickBanScreen kickBanScreen = new KickBanScreen(messages);
         plugin.punishExecutor(new PunishExecutor(
@@ -101,10 +109,45 @@ public final class PluginBootstrap {
                 plugin.banService().deactivateExpired();
             });
             plugin.scheduler().runAsyncTimer(plugin.banService()::deactivateExpired, 20L * 60 * 5, 20L * 60 * 5);
+            // Alle 2 Minuten aktuelle Chunks mitschreiben, damit der Score über Tage wächst.
+            plugin.scheduler().runSyncTimer(this::sampleOnlineLocations, 20L * 60 * 2, 20L * 60 * 2);
         }
 
         plugin.pluginLogger().info("Ban-System geladen. Datenbank aktiv: " + storage.isEnabled());
         return true;
+    }
+
+    private void sampleOnlineLocations() {
+        if (!plugin.storage().isEnabled()) {
+            return;
+        }
+        List<KnownPlayer> snapshots = new ArrayList<>();
+        Instant now = Instant.now();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            snapshots.add(SessionTracker.fromJoin(
+                    player.getUniqueId(),
+                    player.getName(),
+                    player.locale().toString(),
+                    player.getClientBrandName() == null || player.getClientBrandName().isBlank() ? "unknown" : player.getClientBrandName(),
+                    player.getWorld().getName(),
+                    player.getLocation().getBlockX() >> 4,
+                    player.getLocation().getBlockZ() >> 4
+            ).toBuilder().lastSeen(now).build());
+        }
+        if (snapshots.isEmpty()) {
+            return;
+        }
+        plugin.scheduler().runAsync(() -> {
+            for (KnownPlayer snapshot : snapshots) {
+                plugin.storage().getPlayers().upsert(snapshot);
+                plugin.locationTracker().record(
+                        snapshot.getUuid(),
+                        snapshot.getLastWorld(),
+                        snapshot.getLastChunkX(),
+                        snapshot.getLastChunkZ()
+                );
+            }
+        });
     }
 
     /**

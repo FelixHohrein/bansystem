@@ -64,6 +64,17 @@ public final class SchemaMigrator {
                     """);
             statement.execute("CREATE INDEX IF NOT EXISTS idx_bans_target ON bans (target_uuid)");
             statement.execute("CREATE INDEX IF NOT EXISTS idx_bans_active ON bans (target_uuid, active)");
+            statement.execute("""
+                    CREATE TABLE IF NOT EXISTS player_locations (
+                        uuid UUID NOT NULL REFERENCES players(uuid),
+                        world VARCHAR(64) NOT NULL,
+                        chunk_x INT NOT NULL,
+                        chunk_z INT NOT NULL,
+                        seen_on DATE NOT NULL,
+                        PRIMARY KEY (uuid, world, chunk_x, chunk_z, seen_on)
+                    )
+                    """);
+            statement.execute("CREATE INDEX IF NOT EXISTS idx_locations_uuid ON player_locations (uuid)");
         }
     }
 }

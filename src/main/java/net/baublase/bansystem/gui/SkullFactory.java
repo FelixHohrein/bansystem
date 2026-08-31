@@ -31,7 +31,7 @@ public final class SkullFactory {
         this.plugin = plugin;
     }
 
-    public ItemStack head(PlayerRef player, AltScore score, List<Ban> history, boolean banned, Locale locale) {
+    public ItemStack head(PlayerRef player, AltScore score, List<Ban> history, boolean banned, boolean immune, Locale locale) {
         ItemStack stack = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) stack.getItemMeta();
         PlayerProfile profile = Bukkit.createProfile(player.getUuid(), player.getName());
@@ -41,6 +41,9 @@ public final class SkullFactory {
         List<Component> lore = new ArrayList<>();
         lore.add(GuiItems.plain(plugin.messages().component(locale, online != null ? Message.GUI_ONLINE : Message.GUI_OFFLINE)));
         lore.add(GuiItems.plain(plugin.messages().component(locale, banned ? Message.GUI_LORE_BANNED : Message.GUI_LORE_NOT_BANNED)));
+        if (immune) {
+            lore.add(GuiItems.plain(plugin.messages().component(locale, Message.GUI_LORE_IMMUNE)));
+        }
         lore.add(GuiItems.plain(plugin.messages().component(locale, Message.GUI_LORE_SCORE, "score", String.valueOf(score.getValue()))));
         if (score.getLikelyMain() != null) {
             lore.add(GuiItems.plain(plugin.messages().component(locale, Message.GUI_LORE_MAIN, "main", score.getLikelyMain().getName())));

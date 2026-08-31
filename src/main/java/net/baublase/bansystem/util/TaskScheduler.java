@@ -47,4 +47,8 @@ public final class TaskScheduler {
     public void runAsyncTimer(Runnable runnable, long delayTicks, long periodTicks) {
         plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, runnable, delayTicks, periodTicks);
     }
+
+    public void runSyncTimer(Runnable runnable, long delayTicks, long periodTicks) {
+        plugin.getServer().getScheduler().runTaskTimer(plugin, runnable, delayTicks, periodTicks);
+    }
 }

@@ -10,6 +10,7 @@ excluded-areas:
   #   - {world: world, x: 10, z: 12}
 
 alt-score:
+  # Max-Punkte je Signal. Wiederholte IPs, Chunks und Login-Stunden über mehrere Tage füllen den Wert erst voll.
   same-ip-current: 40
   same-ip-history: 25
   never-online-together: 15
